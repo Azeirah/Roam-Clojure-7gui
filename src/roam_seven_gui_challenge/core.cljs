@@ -1,7 +1,9 @@
 (ns roam-seven-gui-challenge.core
     (:require
       [reagent.core :as r]
-      [reagent.dom :as d]))
+      [reagent.dom :as d]
+      [goog.string :as gstring]
+      [goog.string.format]))
 
 ;; -------------------------
 ;; Views
@@ -65,6 +67,12 @@
 ;; -------------------------
 ;; Seven gui Flight Booker
 
+; helper function -- stands for transparent log
+; logs a value and passes that value on
+(defn tlog [arg]
+  (js/console.log "Arg is " arg)
+  arg)
+
 ; business logic
 (defonce one-way "one-way")
 (defonce return "return")
@@ -76,9 +84,6 @@
   (not (= "Invalid Date"
     (.toDateString (js/Date. date)))))
 
-(defn tlog [arg]
-  (js/console.log "Arg is " arg)
-  arg)
 
 ; is considered valid when the flight date comes before the return date
 (defn flight-dates-are-valid? [flight-date return-date]
@@ -167,6 +172,48 @@
 ; might try that one out in a different challenge if it makes sense
 ; or just to see what the tradeoffs are.
 
+;; -------------------------
+;; Seven gui Timer
+
+; decisecond is one tenth of a second
+; I use this rare uncommon format
+; because the precision we care about is 1/10th of a second
+(def deciseconds-elapsed (r/atom 0))
+(def duration (r/atom 100))
+
+(defn timer [deciseconds-elapsed duration]
+  (fn []
+    [:div 
+      [:label "Elapsed time: "] 
+      [:progress {:max @duration :value @deciseconds-elapsed}]
+
+      [:p (gstring/format "%.1fs" (/ @deciseconds-elapsed 10))]
+
+      [:label "Duration: "]
+      [:input {:type "range"
+               :value @duration
+               :min 50 
+               :max 150
+               :on-change #(reset! duration (-> % .-target .-value))}]
+
+      ; apologies for my sins
+      [:br]
+
+      [:input {:type "button" 
+               :on-click #(reset! deciseconds-elapsed 0)
+               :value "Reset time"}]]))
+
+(def intervalID 
+  (js/setInterval 
+    (fn []
+      (if (< @deciseconds-elapsed @duration)
+        (swap! deciseconds-elapsed (fn [ms] (+ ms 1)))
+        (js/console.log "finished"))) 100))
+
+(defn component-4 []
+  [:div {:class "timer"}
+   [:h2 "Timer"]
+   [timer deciseconds-elapsed duration]])
 
 ;; -------------------------
 ;; Seven gui main
@@ -176,7 +223,9 @@
    [:h1 "Seven gui for Roam using ClojureScript and Reagent"]
    [component-1]
    [component-2]
-   [component-3]])
+   [component-3]
+   [component-4]
+   ])
   
 ;; -------------------------
 ;; Initialize app
