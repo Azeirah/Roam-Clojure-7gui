@@ -3,15 +3,31 @@
   src: url("Gilbert.otf") format('woff');
 }
 
+/* Makes it a lot easier to align
+   elements.
+   Most visible in the flight booker example*/
+* {
+  box-sizing: border-box;
+}
+
 html {
   background-color: #f2f2f2;
-  width: 480px;
+  width: 720px;
   margin: 0 auto;
+  font-family: sans-serif;
 }
 
 h1, h2, h3 {
   font-family: "Gilbert Color"; 
 }	
+
+h1 {
+  font-size: 4em;
+}
+
+h2 {
+  font-size: 3em;
+}
 
 .counter input {
   width: 400px;
@@ -25,4 +41,11 @@ h1, h2, h3 {
   width: 400px;
   margin: 0;
   padding: 0;
+}
+
+.flight-booker input,
+.flight-booker select,
+.flight-booker button {
+  display: block;
+  width: 240px;
 }
