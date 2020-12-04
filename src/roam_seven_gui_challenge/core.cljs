@@ -3,7 +3,8 @@
       [reagent.core :as r]
       [reagent.dom :as d]
       [goog.string :as gstring]
-      [goog.string.format]))
+      [goog.string.format]
+      [clojure.string :as str]))
 
 ;; -------------------------
 ;; Views
@@ -70,7 +71,7 @@
 ; helper function -- stands for transparent log
 ; logs a value and passes that value on
 (defn tlog [arg]
-  (js/console.log "Arg is " arg)
+  (js/console.log "Arg is " (clj->js arg))
   arg)
 
 ; business logic
@@ -203,6 +204,11 @@
                :on-click #(reset! deciseconds-elapsed 0)
                :value "Reset time"}]]))
 
+; note: this code should be inside of the timer component,
+; I factored it outside when I had some problems, only realizing later
+; that the problem was with hot-reloading, not with having the interval inside
+; the timer component.
+; this is also why the deciseconds-elapsed and duration atoms are globally-scoped
 (def intervalID 
   (js/setInterval 
     (fn []
@@ -216,6 +222,124 @@
    [timer deciseconds-elapsed duration]])
 
 ;; -------------------------
+;; Seven gui CRUD
+
+; using rand-int to generate ids is bad.
+(defn create-person [first-name last-name]
+  {:first-name first-name :last-name last-name})
+
+(defn generate-person-id []
+  (rand-int 10000000))
+
+; There's a big weakness in the approach I've taken
+; by using "selected-person" like this.
+; Names can be duplicates.
+; For instance, if there are to "barry white"'s in this list,
+; selecting the first one and deleting it could result in deleting the second one
+; I think a better approach is to add a unique-id to each name-"object"
+; right now a person is a tuple of [first-name last-name]
+; but a better approach would be
+; {:first-name f
+;  :last-name l
+;  :person-id id}
+(def crud-state (r/atom {
+  :filter-value ""
+  :names (hash-map
+    (generate-person-id) (create-person "Hans" "Emil")
+    (generate-person-id) (create-person "Max" "Mustermann")
+    (generate-person-id) (create-person "Roman" "Tisch"))
+  :selected-person nil
+  :first-name ""
+  :last-name ""}))
+
+(defn event-handler [state [event-name value]]
+  (case event-name
+    :change-selection 
+      (assoc state :selected-person value
+                   ; I'm sure there's an easier alternative for dealing 
+                   ; with [k v] pairs from a hashmap
+                   ; last feels like a hack
+                   :first-name (get (last value) :first-name)
+                   :last-name (get (last value) :last-name))
+    :change-first-name
+      (assoc state :first-name value)
+    :change-last-name
+      (assoc state :last-name value)
+    :change-filter
+      (assoc state :filter-value value)
+    :add-entry
+      (assoc state :names 
+        (conj (get state :names) 
+              {(generate-person-id) 
+               (create-person (get state :first-name) (get state :last-name))}))
+    :update-entry
+      (assoc state :names
+        (assoc-in 
+          (assoc-in (get state :names) [(first (get state :selected-person)) :first-name] (get state :first-name))
+          [(first (get state :selected-person)) :last-name] (get state :last-name)))
+    :delete-entry
+      (assoc state :names
+        (dissoc (get state :names) (first (get state :selected-person))))
+    state))
+
+(defn crud-emit [e]
+  (js/console.log "Handling event" (clj->js e))
+  (js/console.log "Old state is" (clj->js @crud-state))
+  (r/rswap! crud-state event-handler e)
+  (js/console.log "New state is" (clj->js @crud-state)))
+
+(defn filter-prefix [filter-value]
+  [:label "Filter prefix: "
+    [:input {:value filter-value
+             :on-change #(crud-emit [:change-filter (-> % .-target .-value)])}]])
+
+(defn name-selector [names filter-value selected-index]
+  (let [filtered-names 
+    (filter (fn [[k v]] 
+      (str/starts-with? (get v :last-name) filter-value)) names)]
+    (tlog filtered-names)
+    [:select {:size 5
+              :on-change #(crud-emit [:change-selection (nth filtered-names (-> % .-target .-selectedIndex))])}
+      (for [[k name] filtered-names]
+        (let [displayname (gstring/format "%s, %s" (get name :first-name) (get name :last-name))]
+          ^{:key displayname} [:option displayname]))]))
+
+(defn name-editor [first-name last-name]
+  [:div {:class ["name-editor"]}
+    [:label "First name: "
+      [:input {:value first-name
+               :on-change #(crud-emit [:change-first-name (-> % .-target .-value)])}]]
+    [:label "Last name: "
+      [:input {:value last-name
+               :on-change #(crud-emit [:change-last-name (-> % .-target .-value)])}]]])
+
+(defn crud [state]
+  [:div
+   [:form
+    [filter-prefix (get @state :filter-value)]
+    [:div {:class "values"}
+      [name-selector (get @state :names)
+                     (get @state :filter-value) 
+                     (get @state :selected-index)]
+      [name-editor (get @state :first-name)
+                   (get @state :last-name)]]]
+      [:div {:class "crudbuttons"}
+        [:input {:type "button" 
+                 :value "Create"
+                 :on-click #(crud-emit [:add-entry])}]
+        [:input {:type "button" 
+                 :value "Update"
+                 :on-click #(crud-emit [:update-entry])}]
+        [:input {:type "button" 
+                 :value "Delete"
+                 :on-click #(crud-emit [:delete-entry])}]]])
+
+(defn component-5 []
+  [:div {:class "crud"}
+   [:h2 "CRUD"]
+   [crud crud-state]])
+
+;; -------------------------
 ;; Seven gui main
 
 (defn seven-gui-roam []
@@ -225,6 +349,7 @@
    [component-2]
    [component-3]
    [component-4]
+   [component-5]
    ])
   
 ;; -------------------------

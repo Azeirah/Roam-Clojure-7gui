@@ -49,3 +49,35 @@ h2 {
   display: block;
   width: 240px;
 }
+
+.crud form {
+  display: flex;
+  flex-direction: column;
+  width: 480px;
+}
+
+.crud form > * {
+  margin: 0 0 8px 0;
+}
+
+.crud .values {
+  display: flex;
+  flex-direction: row;
+}
+
+.crud .values select {
+  flex: 3;
+}
+
+.crud .name-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.crud .name-editor > * {
+  margin: 0 0 8px 8px;
+}
+
+.crud .crudbuttons input {
+  margin: 0 32px 0 0;
+}
