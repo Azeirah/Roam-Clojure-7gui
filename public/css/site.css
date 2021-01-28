@@ -81,3 +81,24 @@ h2 {
 .crud .crudbuttons input {
   margin: 0 32px 0 0;
 }
+
+.circle-drawer {
+  width: 100%;
+}
+
+.circle-drawer > div > * {
+  margin: 8px;
+}
+
+.circle-drawer canvas {
+  border: 1px solid grey;
+}
+
+.undo-redo-controls {
+  display: flex;
+}
+
+.undo-redo-controls input {
+  flex: 1;
+}
+
